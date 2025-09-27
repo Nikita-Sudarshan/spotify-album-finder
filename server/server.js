@@ -1,45 +1,24 @@
-import express from "express";
-import cors from "cors";
-import fetch from "node-fetch";
-import dotenv from "dotenv";
-import path from "path";
-import { fileURLToPath } from "url";
+const express = require("express");
+const cors = require("cors");
+const fetch = require("node-fetch");
+const dotenv = require("dotenv");
+const path = require("path");
 
 dotenv.config();
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-const express = require("express");
-const path = require("path");
 const app = express();
-
 const PORT = process.env.PORT || 10000;
-
-// Serve React frontend
-app.use(express.static(path.join(__dirname, "../client/dist")));
-
-app.get("*", (req, res) => {
-  res.sendFile(path.join(__dirname, "../client/dist", "index.html"));
-});
-
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-});
-
 
 app.use(cors());
 app.use(express.json());
 
-// Spotify API credentials
+// Spotify API keys
 const CLIENT_ID = process.env.SPOTIFY_CLIENT_ID;
 const CLIENT_SECRET = process.env.SPOTIFY_CLIENT_SECRET;
 
-// Token storage
 let accessToken = "";
 let tokenExpires = 0;
 
-// Get Spotify access token
 async function getAccessToken() {
   const now = Date.now();
   if (accessToken && now < tokenExpires) return accessToken;
@@ -49,7 +28,8 @@ async function getAccessToken() {
     headers: {
       "Content-Type": "application/x-www-form-urlencoded",
       Authorization:
-        "Basic " + Buffer.from(`${CLIENT_ID}:${CLIENT_SECRET}`).toString("base64"),
+        "Basic " +
+        Buffer.from(`${CLIENT_ID}:${CLIENT_SECRET}`).toString("base64"),
     },
     body: "grant_type=client_credentials",
   });
@@ -60,7 +40,7 @@ async function getAccessToken() {
   return accessToken;
 }
 
-// Spotify search API
+// API route
 app.get("/api/search", async (req, res) => {
   const { q } = req.query;
   if (!q) return res.json({ items: [] });
@@ -68,11 +48,11 @@ app.get("/api/search", async (req, res) => {
   try {
     const token = await getAccessToken();
     const response = await fetch(
-      `https://api.spotify.com/v1/search?q=${encodeURIComponent(q)}&type=album&limit=20`,
+      `https://api.spotify.com/v1/search?q=${encodeURIComponent(
+        q
+      )}&type=album&limit=20`,
       {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+        headers: { Authorization: `Bearer ${token}` },
       }
     );
     const data = await response.json();
@@ -83,11 +63,10 @@ app.get("/api/search", async (req, res) => {
   }
 });
 
-// Serve React frontend
+// Serve React build
 app.use(express.static(path.join(__dirname, "../client/dist")));
 app.get("*", (req, res) => {
-  res.sendFile(path.join(__dirname, "../client/dist/index.html"));
+  res.sendFile(path.join(__dirname, "../client/dist", "index.html"));
 });
 
-// Start server
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
